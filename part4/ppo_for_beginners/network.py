@@ -7,6 +7,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
+import dm_env
 
 class FeedForwardNN(nn.Module):
 	"""
@@ -42,6 +43,12 @@ class FeedForwardNN(nn.Module):
 		# Convert observation to tensor if it's a numpy array
 		if isinstance(obs, np.ndarray):
 			obs = torch.tensor(obs, dtype=torch.float)
+
+		if isinstance(obs, dm_env._environment.TimeStep):
+			obs = obs.observation
+			obs=np.array(obs['orientations'].tolist()+[obs['height']]+obs['velocity'].tolist())
+			obs = torch.tensor(obs)
+			obs = obs.float()
 
 		activation1 = F.relu(self.layer1(obs))
 		activation2 = F.relu(self.layer2(activation1))

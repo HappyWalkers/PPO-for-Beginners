@@ -5,16 +5,15 @@
 """
 
 import time
-import gymnasium as gym
 
 import numpy as np
-import wandb
 
 import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
+from dm_control import suite,viewer
 
 class PPO:
     """
@@ -32,18 +31,14 @@ class PPO:
             Returns:
                 None
         """
-        # Make sure the environment is compatible with our code
-        assert(type(env.observation_space) == gym.spaces.box.Box)
-        assert(type(env.action_space) == gym.spaces.box.Box)
-        
         # Initialize hyperparameters for training with PPO
         self._init_hyperparameters(hyperparameters)
 
         # Extract environment information
         self.env = env
         
-        self.obs_dim = env.observation_space.shape[0]
-        self.act_dim = env.action_space.shape[0]
+        self.obs_dim = env.observation_space()
+        self.act_dim = env.action_space()
 
         # Initialize actor and critic networks
         self.actor = policy_class(self.obs_dim, self.act_dim)                                                   # ALG STEP 1
@@ -191,7 +186,9 @@ class PPO:
             self._log_summary()
 
             # Save our model if it's time
-            if i_so_far % self.save_freq == 0:
+            if i_so_far % self.save_freq == 0 or i_so_far == 1:
+                with torch.no_grad():
+                    viewer.launch(self.env.env, policy=self.actor)
                 torch.save(self.actor.state_dict(), './ppo_actor.pth')
                 torch.save(self.critic.state_dict(), './ppo_critic.pth')
 
@@ -247,15 +244,12 @@ class PPO:
             ep_vals = [] # state values collected per episode
             ep_dones = [] # done flag collected per episode
             # Reset the environment. Note that obs is short for observation. 
-            obs, _ = self.env.reset()
+            obs = self.env.reset()
             # Initially, the game is not done
             done = False
 
             # Run an episode for a maximum of max_timesteps_per_episode timesteps
             for ep_t in range(self.max_timesteps_per_episode):
-                # If render is specified, render the environment
-                if self.render:
-                    self.env.render()
                 # Track done flag of the current state
                 ep_dones.append(done)
 
@@ -269,8 +263,7 @@ class PPO:
                 action, log_prob = self.get_action(obs)
                 val = self.critic(obs)
 
-                obs, rew, terminated, truncated, _ = self.env.step(action)
-                done = terminated or truncated
+                obs, rew, done, _ = self.env.step(action)
                 # Track recent reward, action, and action log probability
                 ep_rews.append(rew)
                 ep_vals.append(val.flatten())
