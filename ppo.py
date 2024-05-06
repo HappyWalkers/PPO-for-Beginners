@@ -3,7 +3,7 @@
 	NOTE: All "ALG STEP"s are following the numbers from the original PPO pseudocode.
 			It can be found here: https://spinningup.openai.com/en/latest/_images/math/e62a8971472597f4b014c2da064f636ffe365ba3.svg
 """
-
+from dm_control import suite,viewer
 import gym
 import time
 
@@ -30,17 +30,13 @@ class PPO:
 			Returns:
 				None
 		"""
-		# Make sure the environment is compatible with our code
-		assert(type(env.observation_space) == gym.spaces.Box)
-		assert(type(env.action_space) == gym.spaces.Box)
-
 		# Initialize hyperparameters for training with PPO
 		self._init_hyperparameters(hyperparameters)
 
 		# Extract environment information
 		self.env = env
-		self.obs_dim = env.observation_space.shape[0]
-		self.act_dim = env.action_space.shape[0]
+		self.obs_dim = env.observation_space()
+		self.act_dim = env.action_space()
 
 		 # Initialize actor and critic networks
 		self.actor = policy_class(self.obs_dim, self.act_dim)                                                   # ALG STEP 1
@@ -144,7 +140,9 @@ class PPO:
 			self._log_summary()
 
 			# Save our model if it's time
-			if i_so_far % self.save_freq == 0:
+			if i_so_far % self.save_freq == 0 or i_so_far == 1:
+				with torch.no_grad():
+					viewer.launch(self.env.env, policy=self.actor)
 				torch.save(self.actor.state_dict(), './ppo_actor.pth')
 				torch.save(self.critic.state_dict(), './ppo_critic.pth')
 
@@ -188,10 +186,6 @@ class PPO:
 
 			# Run an episode for a maximum of max_timesteps_per_episode timesteps
 			for ep_t in range(self.max_timesteps_per_episode):
-				# If render is specified, render the environment
-				if self.render and (self.logger['i_so_far'] % self.render_every_i == 0) and len(batch_lens) == 0:
-					self.env.render()
-
 				t += 1 # Increment timesteps ran this batch so far
 
 				# Track observations in this batch
@@ -332,12 +326,12 @@ class PPO:
 		self.n_updates_per_iteration = 5                # Number of times to update actor/critic per iteration
 		self.lr = 0.005                                 # Learning rate of actor optimizer
 		self.gamma = 0.95                               # Discount factor to be applied when calculating Rewards-To-Go
-		self.clip = 0.2                                 # Recommended 0.2, helps define the threshold to clip the ratio during SGA
+		self.clip = 0.5                                 # Recommended 0.2, helps define the threshold to clip the ratio during SGA
 
 		# Miscellaneous parameters
 		self.render = True                              # If we should render during rollout
 		self.render_every_i = 10                        # Only render every n iterations
-		self.save_freq = 10                             # How often we save in number of iterations
+		self.save_freq = 10000                             # How often we save in number of iterations
 		self.seed = None                                # Sets the seed of our program, used for reproducibility of results
 
 		# Change any default values to custom values for specified hyperparameters

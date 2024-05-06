@@ -2,7 +2,9 @@
 	This file is the executable for running PPO. It is based on this medium article: 
 	https://medium.com/@eyyu/coding-ppo-from-scratch-with-pytorch-part-1-4-613dfc1b14c8
 """
-
+from dm_control import suite,viewer
+from dmcontrol_to_gym_wrapper import DmcontrolToGymWrapper
+import numpy as np
 import gym
 import sys
 import torch
@@ -108,7 +110,11 @@ def main(args):
 	# Creates the environment we'll be running. If you want to replace with your own
 	# custom environment, note that it must inherit Gym and have both continuous
 	# observation and action spaces.
-	env = gym.make('Pendulum-v0')
+	# env = gym.make('Pendulum-v0')
+	r0 = np.random.RandomState(42)
+	env = suite.load('walker', 'walk',
+					task_kwargs={'random': r0})
+	env = DmcontrolToGymWrapper(env)
 
 	# Train or test, depending on the mode specified
 	if args.mode == 'train':
