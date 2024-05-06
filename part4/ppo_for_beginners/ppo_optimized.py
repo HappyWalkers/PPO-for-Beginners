@@ -14,6 +14,7 @@ from torch.optim import Adam
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
 from dm_control import suite,viewer
+import matplotlib.pyplot as plt
 
 class PPO:
     """
@@ -62,6 +63,11 @@ class PPO:
             'actor_losses': [],     # losses of actor network in current iteration
             'lr': 0,
         }
+        
+        # list for recording the returns
+        self.return_list = []
+        self.timestep_list = []
+        
     def learn(self, total_timesteps):
         """
             Train the actor and critic networks. Here is where the main PPO algorithm resides.
@@ -185,12 +191,21 @@ class PPO:
             # Print a summary of our training so far
             self._log_summary()
 
-            # Save our model if it's time
             if i_so_far % self.save_freq == 0 or i_so_far == 1:
-                with torch.no_grad():
-                    viewer.launch(self.env.env, policy=self.actor)
+                # Save our model if it's time
                 torch.save(self.actor.state_dict(), './ppo_actor.pth')
                 torch.save(self.critic.state_dict(), './ppo_critic.pth')
+                
+                # render
+                with torch.no_grad():
+                    viewer.launch(self.env.env, policy=self.actor)
+                    
+                # plot the returns and save the figure
+                plt.plot(self.timestep_list,self.return_list)
+                plt.xlabel('Timesteps')
+                plt.ylabel('Returns')
+                plt.title('Returns vs Timesteps')
+                plt.savefig('returns_vs_timesteps.png')
 
     def calculate_gae(self, rewards, values, dones):
         batch_advantages = []  # List to store computed advantages for each timestep
@@ -424,6 +439,10 @@ class PPO:
         avg_ep_lens = np.mean(self.logger['batch_lens'])
         avg_ep_rews = np.mean([np.sum(ep_rews) for ep_rews in self.logger['batch_rews']])
         avg_actor_loss = np.mean([losses.float().mean() for losses in self.logger['actor_losses']])
+        
+        # record the returns and timesteps
+        self.return_list.append(avg_ep_rews)
+        self.timestep_list.append(t_so_far)
 
         # Round decimal places for more aesthetic logging messages
         avg_ep_lens = str(round(avg_ep_lens, 2))

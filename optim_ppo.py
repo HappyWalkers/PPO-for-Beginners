@@ -16,7 +16,7 @@ def main(args: argparse.Namespace):
         'lr': 5e-3, 
         'lam': 0.98,
         'clip': 0.2, 
-        'save_freq': 500, 
+        'save_freq': 100, 
         'seed': args.seed,
         'max_grad_norm':0.5,
         'target_kl':0.02,
