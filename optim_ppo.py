@@ -13,14 +13,14 @@ def main(args: argparse.Namespace):
         'max_timesteps_per_episode': 1024, 
         'gamma': 0.99, 
         'n_updates_per_iteration': 4,
-        'lr': 1e-2, 
+        'lr': 1e-3, 
         'lam': 0.98,
         'clip': 0.2, 
-        'save_freq': 500, 
+        'save_freq': 5000, 
         'seed': args.seed,
         'max_grad_norm':0.5,
         'target_kl':0.02,
-        'ent_coef':0.001,
+        'ent_coef':0,
         'num_minibatches':2
     }
     total_timesteps = 1e8
